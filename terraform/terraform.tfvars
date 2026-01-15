@@ -1,0 +1,19 @@
+# Example Terraform variables
+# Copy this to terraform.tfvars and customize for your environment
+
+aws_region   = "us-east-1"
+environment  = "dev"
+project_name = "Compliance-as-Code"
+
+# CloudTrail configuration
+cloudtrail_retention_days = 365
+
+# VPC Flow Logs configuration
+flowlog_retention_days = 30
+
+# Additional tags
+tags = {
+  Owner      = "SecurityTeam"
+  CostCenter = "Security"
+  Compliance = "CIS"
+}
