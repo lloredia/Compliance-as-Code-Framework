@@ -79,7 +79,7 @@ compliance-as-code/
 │   ├── outputs.tf               # Output values
 │   └── terraform.tfvars         # Variable values (gitignored)
 ├── .github/workflows/           # CI/CD automation
-│   └── compliance.yml           # Compliance check workflow
+│   └── main.yml                 # Compliance check workflow
 └── scripts/                     # Helper scripts
     ├── analyze-prowler.py       # Parse Prowler results
     └── check-compliance.sh      # Quick compliance check
@@ -102,7 +102,7 @@ compliance-as-code/
 pip install prowler
 
 # Run CIS benchmark scan
-prowler aws --compliance cis_1.5_aws
+python -m prowler aws --compliance cis_1.5_aws
 ```
 
 ### 2. Deploy Compliance Fixes
@@ -124,7 +124,7 @@ terraform apply
 
 ```bash
 # Run Prowler again to see improvements
-prowler aws --compliance cis_1.5_aws
+python -m prowler aws --compliance cis_1.5_aws
 
 # Compare before/after results
 python3 ../scripts/analyze-prowler.py --compare
@@ -216,7 +216,7 @@ The GitHub Actions workflow automatically:
 
 ```bash
 # Generate HTML report
-prowler aws --compliance cis_1.5_aws --output-formats html
+python -m prowler aws --compliance cis_1.5_aws --output-formats html
 
 # View in browser
 open prowler-output-*.html
