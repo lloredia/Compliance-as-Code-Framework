@@ -1,4 +1,3 @@
-# AWS Compliance-as-Code Framework
 <div id="top">
 
 <!-- HEADER STYLE: CLASSIC -->
