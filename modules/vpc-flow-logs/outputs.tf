@@ -10,5 +10,5 @@ output "log_group_names" {
 
 output "iam_role_arn" {
   description = "ARN of the IAM role used by Flow Logs"
-  value       = var.enable_per_vpc ? aws_iam_role.flow_logs[0].arn : null
+  value       = length(aws_iam_role.flow_logs) > 0 ? aws_iam_role.flow_logs[0].arn : null
 }

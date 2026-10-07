@@ -2,6 +2,11 @@ variable "minimum_password_length" {
   description = "Minimum length of password (CIS recommends 14+)"
   type        = number
   default     = 14
+
+  validation {
+    condition     = var.minimum_password_length >= 14
+    error_message = "CIS 1.8 requires a minimum password length of 14."
+  }
 }
 
 variable "require_lowercase_characters" {
@@ -38,12 +43,22 @@ variable "max_password_age" {
   description = "Number of days before password expires (CIS recommends 90)"
   type        = number
   default     = 90
+
+  validation {
+    condition     = var.max_password_age > 0 && var.max_password_age <= 90
+    error_message = "CIS 1.11 requires passwords to expire within 90 days."
+  }
 }
 
 variable "password_reuse_prevention" {
   description = "Number of previous passwords to prevent reuse (CIS recommends 24)"
   type        = number
   default     = 24
+
+  validation {
+    condition     = var.password_reuse_prevention >= 24
+    error_message = "CIS 1.9 requires remembering at least 24 passwords."
+  }
 }
 
 variable "hard_expiry" {
