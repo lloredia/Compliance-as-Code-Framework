@@ -1,92 +1,87 @@
-# VPC Flow Logs Module - Enable network traffic logging
-# Helps with security monitoring and network troubleshooting
-
-# Data source to get all VPCs in the account
 data "aws_vpcs" "all" {}
 
-data "aws_vpc" "selected" {
-  for_each = toset(data.aws_vpcs.all.ids)
-  id       = each.value
+data "aws_region" "current" {}
+
+locals {
+  vpc_ids = var.enable_per_vpc ? toset(data.aws_vpcs.all.ids) : toset([])
 }
 
-# CloudWatch Log Group for Flow Logs
+module "kms" {
+  source = "../cmk"
+
+  name               = "${var.role_name_prefix}-vpc-flow-logs"
+  description        = "Encrypts VPC flow log groups."
+  service_principals = ["logs.${data.aws_region.current.name}.amazonaws.com"]
+  tags               = var.tags
+}
+
 resource "aws_cloudwatch_log_group" "flow_logs" {
-  for_each = var.enable_per_vpc ? toset(data.aws_vpcs.all.ids) : toset([])
-  
+  for_each = local.vpc_ids
+
   name              = "/aws/vpc/flowlogs/${each.value}"
   retention_in_days = var.log_retention_days
+  kms_key_id        = module.kms.key_arn
 
-  tags = merge(
-    var.tags,
-    {
-      Name = "VPC Flow Logs - ${each.value}"
-    }
-  )
+  tags = merge(var.tags, {
+    Name = "VPC Flow Logs - ${each.value}"
+  })
 }
 
-# IAM role for VPC Flow Logs
-resource "aws_iam_role" "flow_logs" {
-  count = var.enable_per_vpc ? 1 : 0
-  
-  name = "${var.role_name_prefix}-vpc-flow-logs"
+data "aws_iam_policy_document" "assume" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["vpc-flow-logs.amazonaws.com"]
+    }
+  }
+}
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Service = "vpc-flow-logs.amazonaws.com"
-        }
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
+resource "aws_iam_role" "flow_logs" {
+  count = length(local.vpc_ids) > 0 ? 1 : 0
+
+  name               = "${var.role_name_prefix}-vpc-flow-logs"
+  assume_role_policy = data.aws_iam_policy_document.assume.json
 
   tags = var.tags
 }
 
-# IAM policy for Flow Logs to write to CloudWatch
-resource "aws_iam_role_policy" "flow_logs" {
-  count = var.enable_per_vpc ? 1 : 0
-  
-  name = "vpc-flow-logs-policy"
-  role = aws_iam_role.flow_logs[0].id
+data "aws_iam_policy_document" "flow_logs" {
+  count = length(local.vpc_ids) > 0 ? 1 : 0
 
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents",
-          "logs:DescribeLogGroups",
-          "logs:DescribeLogStreams"
-        ]
-        Resource = "*"
-      }
+  statement {
+    actions = [
+      "logs:CreateLogStream",
+      "logs:DescribeLogStreams",
+      "logs:PutLogEvents",
     ]
-  })
+    resources = concat(
+      [for group in aws_cloudwatch_log_group.flow_logs : group.arn],
+      [for group in aws_cloudwatch_log_group.flow_logs : "${group.arn}:*"],
+    )
+  }
 }
 
-# Enable Flow Logs for each VPC
+resource "aws_iam_role_policy" "flow_logs" {
+  count = length(local.vpc_ids) > 0 ? 1 : 0
+
+  name   = "vpc-flow-logs"
+  role   = aws_iam_role.flow_logs[0].id
+  policy = data.aws_iam_policy_document.flow_logs[0].json
+}
+
 resource "aws_flow_log" "main" {
-  for_each = var.enable_per_vpc ? toset(data.aws_vpcs.all.ids) : toset([])
+  for_each = local.vpc_ids
 
-  vpc_id          = each.value
-  traffic_type    = var.traffic_type
-  iam_role_arn    = aws_iam_role.flow_logs[0].arn
-  log_destination = aws_cloudwatch_log_group.flow_logs[each.value].arn
+  vpc_id               = each.value
+  traffic_type         = var.traffic_type
+  iam_role_arn         = aws_iam_role.flow_logs[0].arn
+  log_destination      = aws_cloudwatch_log_group.flow_logs[each.value].arn
+  log_destination_type = "cloud-watch-logs"
 
-  tags = merge(
-    var.tags,
-    {
-      Name   = "Flow Logs - ${each.value}"
-      VPC_ID = each.value
-    }
-  )
+  tags = merge(var.tags, {
+    Name = "Flow Logs - ${each.value}"
+  })
 
   depends_on = [aws_iam_role_policy.flow_logs]
 }

@@ -1,21 +1,3 @@
-terraform {
-  required_version = ">= 1.0"
-
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-
-  # Optional: Configure backend for state storage
-  # backend "s3" {
-  #   bucket = "your-terraform-state-bucket"
-  #   key    = "compliance/terraform.tfstate"
-  #   region = "us-east-1"
-  # }
-}
-
 provider "aws" {
   region = var.aws_region
 
@@ -28,29 +10,31 @@ provider "aws" {
   }
 }
 
-# Module 1: Enable CloudTrail
+data "aws_caller_identity" "current" {}
+
+locals {
+  name_prefix = lower(var.project_name)
+}
+
 module "cloudtrail" {
   source = "../modules/cloudtrail"
 
-  trail_name         = "${var.project_name}-trail"
-  bucket_name        = "${lower(var.project_name)}-cloudtrail-${data.aws_caller_identity.current.account_id}"
+  trail_name         = "${local.name_prefix}-trail"
+  bucket_name        = "${local.name_prefix}-cloudtrail-${data.aws_caller_identity.current.account_id}"
   log_retention_days = var.cloudtrail_retention_days
-
-  tags = var.tags
+  tags               = var.tags
 }
 
-# Module 2: Enable VPC Flow Logs
 module "vpc_flow_logs" {
   source = "../modules/vpc-flow-logs"
 
   enable_per_vpc     = true
   traffic_type       = "ALL"
   log_retention_days = var.flowlog_retention_days
-
-  tags = var.tags
+  role_name_prefix   = local.name_prefix
+  tags               = var.tags
 }
 
-# Module 3: IAM Password Policy
 module "iam_password_policy" {
   source = "../modules/iam-password-policy"
 
@@ -63,5 +47,35 @@ module "iam_password_policy" {
   require_symbols              = true
 }
 
-# Data source to get current AWS account ID
-data "aws_caller_identity" "current" {}
+module "s3_security" {
+  source = "../modules/s3-security"
+
+  manage_existing_buckets = var.manage_existing_s3_buckets
+  exclude_bucket_prefixes = [local.name_prefix]
+  tags                    = var.tags
+}
+
+module "aws_config" {
+  source = "../modules/aws-config"
+
+  name_prefix = local.name_prefix
+  bucket_name = "${local.name_prefix}-config-${data.aws_caller_identity.current.account_id}"
+  tags        = var.tags
+}
+
+module "security_group_audit" {
+  source = "../modules/security-group-audit"
+
+  name_prefix = local.name_prefix
+
+  depends_on = [module.aws_config]
+}
+
+module "cloudwatch_cis_alarms" {
+  source = "../modules/cloudwatch-cis-alarms"
+
+  name_prefix               = local.name_prefix
+  cloudtrail_log_group_name = module.cloudtrail.cloudwatch_log_group_name
+  notification_email        = var.notification_email
+  tags                      = var.tags
+}

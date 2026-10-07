@@ -1,17 +1,18 @@
-# Example Terraform variables
-# Copy this to terraform.tfvars and customize for your environment
+# Copy to terraform.tfvars (gitignored) and edit.
 
-aws_region = "us-east-1"
-environment = "dev"
+aws_region   = "us-east-1"
+environment  = "dev"
 project_name = "compliance"
 
-# CloudTrail configuration
 cloudtrail_retention_days = 365
+flowlog_retention_days    = 30
 
-# VPC Flow Logs configuration
-flowlog_retention_days = 30
+# Set true only after reviewing which pre-existing buckets would be adopted.
+manage_existing_s3_buckets = false
 
-# Additional tags
+# Leave empty to create the alarm topic without an email subscription.
+notification_email = ""
+
 tags = {
   Owner      = "SecurityTeam"
   CostCenter = "Security"

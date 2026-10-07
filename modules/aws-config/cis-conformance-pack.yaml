@@ -1,0 +1,155 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CIS-aligned AWS Config rules for identity, logging, storage, and monitoring.
+
+Resources:
+  IamPasswordPolicy:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: cis-iam-password-policy
+      InputParameters:
+        RequireUppercaseCharacters: "true"
+        RequireLowercaseCharacters: "true"
+        RequireSymbols: "true"
+        RequireNumbers: "true"
+        MinimumPasswordLength: "14"
+        PasswordReusePrevention: "24"
+        MaxPasswordAge: "90"
+      Source:
+        Owner: AWS
+        SourceIdentifier: IAM_PASSWORD_POLICY
+
+  RootAccountMfaEnabled:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: cis-root-account-mfa-enabled
+      Source:
+        Owner: AWS
+        SourceIdentifier: ROOT_ACCOUNT_MFA_ENABLED
+
+  IamRootAccessKeyCheck:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: cis-iam-root-access-key-check
+      Source:
+        Owner: AWS
+        SourceIdentifier: IAM_ROOT_ACCESS_KEY_CHECK
+
+  IamUserMfaEnabled:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: cis-iam-user-mfa-enabled
+      Source:
+        Owner: AWS
+        SourceIdentifier: IAM_USER_MFA_ENABLED
+
+  MfaEnabledForIamConsoleAccess:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: cis-mfa-enabled-for-iam-console-access
+      Source:
+        Owner: AWS
+        SourceIdentifier: MFA_ENABLED_FOR_IAM_CONSOLE_ACCESS
+
+  AccessKeysRotated:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: cis-access-keys-rotated
+      InputParameters:
+        maxAccessKeyAge: "90"
+      Source:
+        Owner: AWS
+        SourceIdentifier: ACCESS_KEYS_ROTATED
+
+  CloudTrailEnabled:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: cis-cloudtrail-enabled
+      Source:
+        Owner: AWS
+        SourceIdentifier: CLOUD_TRAIL_ENABLED
+
+  MultiRegionCloudTrailEnabled:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: cis-multi-region-cloudtrail-enabled
+      Source:
+        Owner: AWS
+        SourceIdentifier: MULTI_REGION_CLOUD_TRAIL_ENABLED
+
+  CloudTrailLogFileValidationEnabled:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: cis-cloudtrail-log-file-validation-enabled
+      Source:
+        Owner: AWS
+        SourceIdentifier: CLOUD_TRAIL_LOG_FILE_VALIDATION_ENABLED
+
+  CloudTrailEncryptionEnabled:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: cis-cloudtrail-encryption-enabled
+      Source:
+        Owner: AWS
+        SourceIdentifier: CLOUD_TRAIL_ENCRYPTION_ENABLED
+
+  CloudTrailCloudWatchLogsEnabled:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: cis-cloudtrail-cloudwatch-logs-enabled
+      Source:
+        Owner: AWS
+        SourceIdentifier: CLOUD_TRAIL_CLOUD_WATCH_LOGS_ENABLED
+
+  VpcFlowLogsEnabled:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: cis-vpc-flow-logs-enabled
+      Source:
+        Owner: AWS
+        SourceIdentifier: VPC_FLOW_LOGS_ENABLED
+
+  S3BucketServerSideEncryptionEnabled:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: cis-s3-bucket-server-side-encryption-enabled
+      Source:
+        Owner: AWS
+        SourceIdentifier: S3_BUCKET_SERVER_SIDE_ENCRYPTION_ENABLED
+
+  S3BucketPublicReadProhibited:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: cis-s3-bucket-public-read-prohibited
+      Source:
+        Owner: AWS
+        SourceIdentifier: S3_BUCKET_PUBLIC_READ_PROHIBITED
+
+  S3BucketPublicWriteProhibited:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: cis-s3-bucket-public-write-prohibited
+      Source:
+        Owner: AWS
+        SourceIdentifier: S3_BUCKET_PUBLIC_WRITE_PROHIBITED
+
+  S3BucketSslRequestsOnly:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: cis-s3-bucket-ssl-requests-only
+      Source:
+        Owner: AWS
+        SourceIdentifier: S3_BUCKET_SSL_REQUESTS_ONLY
+
+  S3AccountLevelPublicAccessBlocks:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: cis-s3-account-level-public-access-blocks
+      MaximumExecutionFrequency: TwentyFour_Hours
+      InputParameters:
+        BlockPublicAcls: "True"
+        IgnorePublicAcls: "True"
+        BlockPublicPolicy: "True"
+        RestrictPublicBuckets: "True"
+      Source:
+        Owner: AWS
+        SourceIdentifier: S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS

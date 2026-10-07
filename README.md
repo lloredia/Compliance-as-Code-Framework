@@ -1,313 +1,151 @@
-<div id="top">
-
-<!-- HEADER STYLE: CLASSIC -->
 <div align="center">
-
 
 # COMPLIANCE-AS-CODE-FRAMEWORK
 
-<em>Automate Compliance, Elevate Security, Accelerate Innovation</em>
+Automate AWS CIS Foundations controls with Terraform, and keep non-compliant changes out of the pipeline.
 
-<!-- BADGES -->
-<img src="https://img.shields.io/github/last-commit/lloredia/Compliance-as-Code-Framework?style=flat&logo=git&logoColor=white&color=0080ff" alt="last-commit">
-<img src="https://img.shields.io/github/languages/top/lloredia/Compliance-as-Code-Framework?style=flat&color=0080ff" alt="repo-top-language">
-<img src="https://img.shields.io/github/languages/count/lloredia/Compliance-as-Code-Framework?style=flat&color=0080ff" alt="repo-language-count">
-
-<em>Built with the tools and technologies:</em>
-
-<img src="https://img.shields.io/badge/JSON-000000.svg?style=flat&logo=JSON&logoColor=white" alt="JSON">
-<img src="https://img.shields.io/badge/Markdown-000000.svg?style=flat&logo=Markdown&logoColor=white" alt="Markdown">
-<img src="https://img.shields.io/badge/GNU%20Bash-4EAA25.svg?style=flat&logo=GNU-Bash&logoColor=white" alt="GNU%20Bash">
-<img src="https://img.shields.io/badge/HCL-006BB6.svg?style=flat&logo=HCL&logoColor=white" alt="HCL">
-<img src="https://img.shields.io/badge/Python-3776AB.svg?style=flat&logo=Python&logoColor=white" alt="Python">
-<img src="https://img.shields.io/badge/GitHub%20Actions-2088FF.svg?style=flat&logo=GitHub-Actions&logoColor=white" alt="GitHub%20Actions">
-<img src="https://img.shields.io/badge/Terraform-844FBA.svg?style=flat&logo=Terraform&logoColor=white" alt="Terraform">
+[![Policy as Code](https://github.com/lloredia/Compliance-as-Code-Framework/actions/workflows/policy.yml/badge.svg)](https://github.com/lloredia/Compliance-as-Code-Framework/actions/workflows/policy.yml)
 
 </div>
-<br>
 
----
+Terraform modules for a single-account AWS baseline, plus GitHub Actions policy checks. Prowler remains the scanner; this repo stores a redacted summary instead of raw scan files.
 
-Automated AWS security compliance framework based on CIS AWS Foundations Benchmark. This project uses Terraform for infrastructure-as-code and Prowler for continuous compliance monitoring.
+## Current compliance status
 
-## 📊 Current Compliance Status
+**Before.** A Prowler scan of the target account, with identifiers removed, reported **367 findings: 127 passed (34.6%), 237 failed (64.6%), and 3 manual**. The largest failure groups were EC2 (68), CloudTrail (53), and the organization services that were not enabled (IAM Access Analyzer, AWS Config, Macie, and Security Hub, 17 each). Full service and severity tables are in [docs/baseline-summary.md](docs/baseline-summary.md).
 
-Based on initial Prowler scan (2026-01-12):
-- **Total Checks**: 278
-- **Passed**: 71 (25.5%)
-- **Failed**: 204 (73.4%)
-- **Critical/High Issues**: 101
+**After.** This stack codifies the controls below. It is not a second scan, so it does not claim a new pass rate. Apply it, run Prowler locally, and compare with `scripts/analyze-prowler.py`.
 
-### Top Problem Areas
-1. **EC2**: 68 failures (security groups, encryption, monitoring)
-2. **CloudTrail**: 19 failures (logging not enabled)
-3. **VPC**: 17 failures (flow logs, network ACLs)
-4. **IAM**: 10 failures (password policies, MFA, access keys)
-5. **S3**: 7 failures (encryption, logging)
+| Area | What the stack does |
+| --- | --- |
+| Logging | Multi-region CloudTrail with log-file validation, KMS, CloudWatch Logs, and an SNS notification topic |
+| Network | VPC flow logs for every VPC in the region, encrypted at rest |
+| Identity | IAM account password policy at the CIS 1.8–1.11 floor (14 characters, 90-day age, 24-password memory) |
+| Storage | Account-level S3 Block Public Access, encrypted delivery buckets, and an opt-in pass that encrypts pre-existing buckets |
+| Detection | AWS Config recorder, a CIS-aligned conformance pack, and Config rules `restricted-ssh` and `restricted-common-ports` |
+| Monitoring | CloudWatch metric filters and alarms for CIS 4.1–4.15, published to SNS |
 
-## 🎯 Project Goals
+Access Analyzer, Macie, Security Hub, and root MFA are still operator tasks. They show up in the baseline and are listed under next steps.
 
-**Phase 1** (Current): Automate fixes for high-priority CIS controls
-- ✅ Enable CloudTrail (CIS 3.1)
-- ✅ Enable VPC Flow Logs
-- ✅ IAM Password Policy (CIS 1.8-1.11)
-- 🚧 S3 Bucket Encryption
-- 🚧 Security Group Rules Audit
+## Architecture
 
-**Phase 2** (Next): Monitoring and alerting
-- CloudWatch metric filters and alarms
-- SNS notifications for compliance violations
-
-**Phase 3** (Future): Advanced automation
-- AWS Config rules
-- Automated incident response
-- Compliance dashboards
-
-## 🏗️ Project Structure
-
-```
-compliance-as-code/
-├── modules/                      # Reusable Terraform modules
-│   ├── cloudtrail/              # Multi-region CloudTrail logging
-│   ├── vpc-flow-logs/           # VPC Flow Logs enablement
-│   ├── iam-password-policy/     # IAM password policy enforcement
-│   ├── s3-encryption/           # S3 default encryption (TODO)
-│   └── security-groups/         # Security group auditing (TODO)
-├── terraform/                    # Root Terraform configuration
-│   ├── main.tf                  # Main infrastructure code
-│   ├── variables.tf             # Input variables
-│   ├── outputs.tf               # Output values
-│   └── terraform.tfvars         # Variable values (gitignored)
-├── .github/workflows/           # CI/CD automation
-│   └── main.yml                 # Compliance check workflow
-└── scripts/                     # Helper scripts
-    ├── analyze-prowler.py       # Parse Prowler results
-    └── check-compliance.sh      # Quick compliance check
+```mermaid
+flowchart TD
+  subgraph ci [GitHub Actions]
+    fmt[terraform fmt]
+    validate[terraform validate]
+    tflint[tflint]
+    checkov[checkov]
+    opa[OPA and conftest]
+  end
+  subgraph stack [terraform root]
+    trail[CloudTrail]
+    flow[VPC flow logs]
+    password[IAM password policy]
+    s3[S3 account public access block]
+    config[AWS Config and CIS pack]
+    sg[Security group Config rules]
+    alarms[CloudWatch CIS alarms]
+  end
+  ci --> stack
+  trail --> bucket[KMS-encrypted S3]
+  trail --> logs[CloudWatch Logs]
+  logs --> alarms
+  alarms --> sns[SNS]
+  config --> sg
 ```
 
-## 🚀 Quick Start
+`terraform/` is the only root module. Reusable modules live in `modules/`. The old `terraform/live/` tree duplicated the root and called modules with the wrong inputs, so it was removed.
 
-### Prerequisites
+## Quick start
 
-- AWS Account with appropriate permissions
-- AWS CLI configured
-- Terraform >= 1.0
-- Python 3.11+
-- Prowler
-
-### 1. Run Initial Compliance Scan
+Requirements: Terraform 1.6.x, AWS credentials with rights to create the resources above, and Python 3.11+ if you want the summary script. Prowler is only needed for a live scan.
 
 ```bash
-# Install Prowler
-pip install prowler
-
-# Run CIS benchmark scan
-python -m prowler aws --compliance cis_1.5_aws
-```
-
-### 2. Deploy Compliance Fixes
-
-```bash
+cp terraform/terraform.tfvars.example terraform/terraform.tfvars
 cd terraform
-
-# Initialize Terraform
-terraform init
-
-# Review the plan
+terraform init -backend=false
 terraform plan
-
-# Apply the fixes
 terraform apply
 ```
 
-### 3. Verify Improvements
+`terraform init -backend=false` keeps state on disk. That is fine for a first pass. For anything you keep, use the remote backend in the next section. `terraform.tfvars` is gitignored.
+
+After apply, scan locally and summarize without committing the raw report:
 
 ```bash
-# Run Prowler again to see improvements
-python -m prowler aws --compliance cis_1.5_aws
-
-# Compare before/after results
-python3 ../scripts/analyze-prowler.py --compare
+./scripts/check-compliance.sh
+# or, if you already have a JSON report:
+python3 scripts/analyze-prowler.py path/to/prowler-output.json
+python3 scripts/analyze-prowler.py --compare --before before.json --after after.json
 ```
 
-## 🔧 Configuration
+## Remote state
 
-### Terraform Variables
-
-Create a `terraform/terraform.tfvars` file:
-
-```hcl
-aws_region              = "us-east-1"
-environment             = "prod"
-project_name            = "my-company-compliance"
-cloudtrail_retention_days = 365
-flowlog_retention_days    = 30
-
-tags = {
-  Owner       = "SecurityTeam"
-  CostCenter  = "IT-Security"
-}
-```
-
-### Module Customization
-
-Each module can be customized independently:
-
-**CloudTrail Module:**
-```hcl
-module "cloudtrail" {
-  source = "../modules/cloudtrail"
-  
-  trail_name         = "my-trail"
-  bucket_name        = "my-cloudtrail-bucket"
-  log_retention_days = 365
-}
-```
-
-**VPC Flow Logs Module:**
-```hcl
-module "vpc_flow_logs" {
-  source = "../modules/vpc-flow-logs"
-  
-  enable_per_vpc     = true
-  traffic_type       = "ALL"  # or "ACCEPT" or "REJECT"
-  log_retention_days = 30
-}
-```
-
-**IAM Password Policy Module:**
-```hcl
-module "iam_password_policy" {
-  source = "../modules/iam-password-policy"
-  
-  minimum_password_length   = 14
-  max_password_age          = 90
-  password_reuse_prevention = 24
-}
-```
-
-## 🔄 CI/CD Pipeline
-
-The GitHub Actions workflow automatically:
-
-1. **On Pull Request:**
-   - Runs Prowler compliance scan
-   - Validates Terraform code
-   - Runs security scan with Checkov
-   - Creates Terraform plan
-   - Comments plan on PR
-
-2. **On Push to Main:**
-   - Runs full compliance scan
-   - Applies Terraform changes
-   - Runs post-deployment verification
-
-3. **Daily Schedule (2 AM UTC):**
-   - Automated compliance monitoring
-   - Generates compliance reports
-
-### Required GitHub Secrets
-
-- `AWS_ROLE_ARN`: IAM role ARN for GitHub Actions (use OIDC)
-
-## 📈 Monitoring Compliance
-
-### View Prowler Results
+Copy `terraform/backend.hcl.example` to `terraform/backend.hcl`, create the S3 bucket and DynamoDB lock table described in that file, then:
 
 ```bash
-# Generate HTML report
-python -m prowler aws --compliance cis_1.5_aws --output-formats html
-
-# View in browser
-open prowler-output-*.html
+cd terraform
+terraform init -backend-config=backend.hcl
 ```
 
-### Analyze Trends
+The backend block is partial on purpose. CI runs `terraform init -backend=false` and `terraform validate`, so pull requests do not need AWS credentials or a state bucket.
+
+## Policy as code
+
+Pull requests and pushes to `main` run:
+
+- `terraform fmt -check -recursive`
+- `terraform init -backend=false` and `terraform validate`
+- `tflint`
+- `checkov` on the Terraform
+- `opa test` and `conftest` against example `terraform show -json` plans
+- `ruff` and `pytest` for `scripts/analyze-prowler.py`
+
+Rego rules in `policy/terraform.rego` reject plans that open SSH or RDP to the internet, turn off S3 Block Public Access, or create a CloudTrail that is single-region or missing log-file validation. Check a real plan the same way:
 
 ```bash
-# Compare multiple scans
-python3 scripts/analyze-prowler.py \
-  --before prowler-2026-01-12.json \
-  --after prowler-2026-01-19.json
+cd terraform
+terraform plan -out=tfplan
+terraform show -json tfplan > plan.json
+conftest test --policy ../policy/terraform.rego plan.json
 ```
 
-## 🛡️ Security Considerations
+The workflow does not apply infrastructure and does not call AWS.
 
-### Terraform State
+## Security notes
 
-- **Production**: Use S3 backend with state locking (DynamoDB)
-- **Enable encryption** on the state bucket
-- **Enable versioning** for state recovery
+- Do not commit `*.tfstate*`, `*.tfvars`, `.terraform/`, or Prowler output. `.gitignore` covers those paths. State and scan files contain account IDs and resource names.
+- Remote state should be encrypted, versioned, locked with DynamoDB, and not public.
+- Bucket names use `data.aws_caller_identity` so the account ID is not hard-coded.
+- Account-level S3 Block Public Access applies to the whole account. `manage_existing_s3_buckets` is off by default because turning it on adopts every other bucket that does not use the project prefix.
+- AWS Config allows one configuration recorder per region. If one already exists, import it or point this module at that recorder before applying.
+- The conformance pack is a CIS-aligned set of AWS managed rules for the controls this repo implements. It is not a byte-for-byte copy of the AWS-published operational pack.
+- Customer managed keys use a root-admin statement because KMS requires `Resource = "*"`. Rotation is enabled.
 
-```hcl
-terraform {
-  backend "s3" {
-    bucket         = "my-terraform-state"
-    key            = "compliance/terraform.tfstate"
-    region         = "us-east-1"
-    encrypt        = true
-    dynamodb_table = "terraform-locks"
-  }
-}
+## Layout
+
+```
+modules/                  reusable modules
+terraform/                single root module
+  backend.hcl.example     opt-in S3 + DynamoDB backend
+policy/                   Rego policies, tests, and example plans
+scripts/analyze-prowler.py
+.github/workflows/policy.yml
 ```
 
-### IAM Permissions
+## Next steps
 
-The IAM role/user running Terraform needs:
-- CloudTrail: `CreateTrail`, `UpdateTrail`
-- S3: `CreateBucket`, `PutBucketPolicy`
-- EC2: `CreateFlowLogs`, `DescribeVpcs`
-- IAM: `UpdateAccountPasswordPolicy`
-- CloudWatch: `CreateLogGroup`, `PutRetentionPolicy`
+1. Apply in a non-production account and review the plan, especially the account-level S3 and Config changes.
+2. Run a local Prowler scan and compare it with the redacted baseline.
+3. Turn on IAM Access Analyzer, Security Hub, and Macie, and require MFA for the root user and console users.
+4. Subscribe an email or chat endpoint to the CIS alarm topic.
+5. If a recorder already exists, import it instead of creating a second one.
 
-## 🐛 Troubleshooting
-
-### CloudTrail Already Exists
-
-If a trail already exists:
-```bash
-# Import existing trail
-terraform import module.cloudtrail.aws_cloudtrail.main existing-trail-name
-```
-
-### S3 Bucket Name Conflicts
-
-S3 bucket names must be globally unique:
-```hcl
-bucket_name = "compliance-cloudtrail-${data.aws_caller_identity.current.account_id}"
-```
-
-### VPC Flow Logs Permission Errors
-
-Ensure the IAM role has permissions and the trust policy is correct.
-
-## 📚 Resources
+## Resources
 
 - [CIS AWS Foundations Benchmark](https://www.cisecurity.org/benchmark/amazon_web_services)
-- [Prowler Documentation](https://docs.prowler.com/)
-- [AWS Security Best Practices](https://docs.aws.amazon.com/security/)
-- [Terraform AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
+- [Prowler](https://docs.prowler.com/)
+- [Terraform AWS provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run `terraform fmt` and `terraform validate`
-5. Submit a pull request
-
-## 📝 License
-
-MIT License - See LICENSE file for details
-
-## 🎓 Next Steps
-
-1. **Review and customize** the Terraform variables
-2. **Run initial deployment** in a dev/test environment
-3. **Monitor compliance improvements** with before/after Prowler scans
-4. **Iterate on remaining failures** from the compliance scan
-5. **Set up automated monitoring** with the GitHub Actions workflow
-
----
-
-**Questions?** Open an issue or reach out to the security team.
+MIT License. See [LICENSE](LICENSE).

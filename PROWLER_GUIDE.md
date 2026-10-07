@@ -1,5 +1,13 @@
 # Prowler Quick Reference Guide
 
+Do not commit scan output. JSON, CSV, HTML, and OCSF reports include account IDs, ARNs, and resource names. Write them under `prowler-results/` (gitignored) and publish only the redacted summary:
+
+```bash
+python3 scripts/analyze-prowler.py prowler-results/prowler-output-*.json
+```
+
+The example account `123456789012` below is a placeholder.
+
 ## Installation
 
 ```bash

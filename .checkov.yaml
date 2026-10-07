@@ -1,0 +1,7 @@
+framework:
+  - terraform
+skip-path:
+  - policy
+  - docs
+quiet: true
+compact: true

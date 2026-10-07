@@ -1,1 +1,28 @@
-**/.terraform/*
+# Terraform local state, caches, and variable files.
+# terraform.tfvars.example and backend.hcl.example are templates and stay tracked.
+.terraform/
+*.tfstate*
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+backend.hcl
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Compliance scan artifacts. Commit a redacted summary, never raw scanner output.
+terraform/output/
+prowler-output*
+prowler-results/
+
+# Python
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc
+.venv/
+
+.DS_Store
