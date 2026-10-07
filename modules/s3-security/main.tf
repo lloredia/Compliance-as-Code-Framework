@@ -1,11 +1,6 @@
-data "aws_s3_buckets" "all" {
-  count = var.manage_existing_buckets ? 1 : 0
-}
-
 locals {
-  discovered = var.manage_existing_buckets ? data.aws_s3_buckets.all[0].buckets : []
   managed_buckets = toset([
-    for name in local.discovered : name
+    for name in var.bucket_names : name
     if length([
       for prefix in var.exclude_bucket_prefixes : prefix
       if startswith(name, prefix)
@@ -21,7 +16,7 @@ resource "aws_s3_account_public_access_block" "this" {
 }
 
 module "encryption_key" {
-  count  = var.manage_existing_buckets ? 1 : 0
+  count  = length(local.managed_buckets) > 0 ? 1 : 0
   source = "../cmk"
 
   name               = "s3-existing-bucket-encryption"
@@ -38,7 +33,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "existing" {
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm     = "aws:kms"
-      kms_master_key_id = module.encryption_key[0].key_arn
+      kms_master_key_id = try(module.encryption_key[0].key_arn, null)
     }
     bucket_key_enabled = true
   }

@@ -18,7 +18,7 @@ variable "traffic_type" {
 variable "log_retention_days" {
   description = "Number of days to retain flow logs in CloudWatch"
   type        = number
-  default     = 30
+  default     = 365
 
   validation {
     condition = contains([

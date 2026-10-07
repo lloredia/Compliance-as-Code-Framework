@@ -1,11 +1,11 @@
-variable "manage_existing_buckets" {
-  description = "Apply default KMS encryption and Block Public Access to buckets already in the account. Buckets created by this stack should be listed in exclude_bucket_prefixes so they are not managed twice."
-  type        = bool
-  default     = false
+variable "bucket_names" {
+  description = "Pre-existing bucket names to encrypt with a customer managed key and block public access. Leave empty to set only the account-level public access block. The AWS provider cannot list every bucket, so names are explicit."
+  type        = list(string)
+  default     = []
 }
 
 variable "exclude_bucket_prefixes" {
-  description = "Bucket name prefixes skipped when manage_existing_buckets is true."
+  description = "Bucket name prefixes skipped even when present in bucket_names."
   type        = list(string)
   default     = []
 }

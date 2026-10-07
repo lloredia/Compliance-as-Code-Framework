@@ -17,7 +17,10 @@ _SPEC.loader.exec_module(analyze_prowler)
 
 
 def test_redact_strips_account_arn_and_iam_name() -> None:
-    raw = "arn:aws:iam::111122223333:user/sample-user in 111122223333 user/sample-user ops@example.com"
+    raw = (
+        "arn:aws:iam::111122223333:user/sample-user in 111122223333 "
+        "user/sample-user ops@example.com"
+    )
     cleaned = analyze_prowler.redact(raw)
     assert "111122223333" not in cleaned
     assert "arn:aws" not in cleaned
@@ -80,9 +83,7 @@ def test_compare_is_redacted(capsys: pytest.CaptureFixture[str], tmp_path: Path)
         encoding="utf-8",
     )
 
-    exit_code = analyze_prowler.main(
-        ["--compare", "--before", str(before), "--after", str(after)]
-    )
+    exit_code = analyze_prowler.main(["--compare", "--before", str(before), "--after", str(after)])
     output = capsys.readouterr().out
     assert exit_code == 0
     assert "111122223333" not in output

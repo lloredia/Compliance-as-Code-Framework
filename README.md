@@ -21,7 +21,7 @@ Terraform modules for a single-account AWS baseline, plus GitHub Actions policy 
 | Logging | Multi-region CloudTrail with log-file validation, KMS, CloudWatch Logs, and an SNS notification topic |
 | Network | VPC flow logs for every VPC in the region, encrypted at rest |
 | Identity | IAM account password policy at the CIS 1.8–1.11 floor (14 characters, 90-day age, 24-password memory) |
-| Storage | Account-level S3 Block Public Access, encrypted delivery buckets, and an opt-in pass that encrypts pre-existing buckets |
+| Storage | Account-level S3 Block Public Access, encrypted delivery buckets, and an explicit list of pre-existing buckets to encrypt |
 | Detection | AWS Config recorder, a CIS-aligned conformance pack, and Config rules `restricted-ssh` and `restricted-common-ports` |
 | Monitoring | CloudWatch metric filters and alarms for CIS 4.1–4.15, published to SNS |
 
@@ -118,7 +118,7 @@ The workflow does not apply infrastructure and does not call AWS.
 - Do not commit `*.tfstate*`, `*.tfvars`, `.terraform/`, or Prowler output. `.gitignore` covers those paths. State and scan files contain account IDs and resource names.
 - Remote state should be encrypted, versioned, locked with DynamoDB, and not public.
 - Bucket names use `data.aws_caller_identity` so the account ID is not hard-coded.
-- Account-level S3 Block Public Access applies to the whole account. `manage_existing_s3_buckets` is off by default because turning it on adopts every other bucket that does not use the project prefix.
+- Account-level S3 Block Public Access applies to the whole account. Pre-existing buckets are encrypted only when listed in `existing_s3_bucket_names`.
 - AWS Config allows one configuration recorder per region. If one already exists, import it or point this module at that recorder before applying.
 - The conformance pack is a CIS-aligned set of AWS managed rules for the controls this repo implements. It is not a byte-for-byte copy of the AWS-published operational pack.
 - Customer managed keys use a root-admin statement because KMS requires `Resource = "*"`. Rotation is enabled.
@@ -129,7 +129,8 @@ The workflow does not apply infrastructure and does not call AWS.
 modules/                  reusable modules
 terraform/                single root module
   backend.hcl.example     opt-in S3 + DynamoDB backend
-policy/                   Rego policies, tests, and example plans
+policy/                   Rego policies and unit tests
+testdata/plans/           example Terraform plan JSON for conftest
 scripts/analyze-prowler.py
 .github/workflows/policy.yml
 ```

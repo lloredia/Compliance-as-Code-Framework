@@ -121,10 +121,7 @@ def render_summary(stats: dict[str, Any]) -> str:
     lines.extend(severity_lines or ["  none"])
     lines.extend(["", "Findings by service:"])
     service_lines = [
-        (
-            f"  {service}: fail={counts['fail']} "
-            f"pass={counts['pass']} manual={counts['info']}"
-        )
+        (f"  {service}: fail={counts['fail']} pass={counts['pass']} manual={counts['info']}")
         for service, counts in stats["by_service"].items()
     ]
     lines.extend(service_lines or ["  none"])
@@ -191,8 +188,9 @@ def main(argv: list[str] | None = None) -> int:
                 return 1
             before = summarize(load_findings(Path(args.before)))
             after = summarize(load_findings(Path(args.after)))
+            comparison = {"before": before, "after": after}
             payload: dict[str, Any] | str = (
-                {"before": before, "after": after} if args.json else render_comparison(before, after)
+                comparison if args.json else render_comparison(before, after)
             )
         else:
             target = Path(args.file) if args.file else _latest_report(Path("."))

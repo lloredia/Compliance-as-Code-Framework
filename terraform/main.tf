@@ -50,7 +50,7 @@ module "iam_password_policy" {
 module "s3_security" {
   source = "../modules/s3-security"
 
-  manage_existing_buckets = var.manage_existing_s3_buckets
+  bucket_names            = var.existing_s3_bucket_names
   exclude_bucket_prefixes = [local.name_prefix]
   tags                    = var.tags
 }

@@ -5,10 +5,11 @@ environment  = "dev"
 project_name = "compliance"
 
 cloudtrail_retention_days = 365
-flowlog_retention_days    = 30
+flowlog_retention_days    = 365
 
-# Set true only after reviewing which pre-existing buckets would be adopted.
-manage_existing_s3_buckets = false
+# Names of pre-existing buckets to encrypt and lock down. Leave empty for
+# account-level Block Public Access only.
+existing_s3_bucket_names = []
 
 # Leave empty to create the alarm topic without an email subscription.
 notification_email = ""

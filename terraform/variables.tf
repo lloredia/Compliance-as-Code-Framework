@@ -23,15 +23,15 @@ variable "cloudtrail_retention_days" {
 }
 
 variable "flowlog_retention_days" {
-  description = "VPC Flow Logs retention in days."
+  description = "VPC Flow Logs retention in days. The baseline keeps a year so the log groups meet the one-year retention check."
   type        = number
-  default     = 30
+  default     = 365
 }
 
-variable "manage_existing_s3_buckets" {
-  description = "Encrypt and block public access on S3 buckets that this stack did not create. Defaults off so a first apply does not adopt every bucket in the account."
-  type        = bool
-  default     = false
+variable "existing_s3_bucket_names" {
+  description = "Pre-existing S3 bucket names to encrypt and block public access on. Leave empty to set only the account-level public access block."
+  type        = list(string)
+  default     = []
 }
 
 variable "notification_email" {

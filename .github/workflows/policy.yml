@@ -54,7 +54,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install Checkov
-        run: python -m pip install "checkov>=3.2"
+        run: python -m pip install "checkov==3.3.25"
 
       - name: Checkov
         run: checkov -d . --config-file .checkov.yaml
@@ -82,11 +82,11 @@ jobs:
         run: opa test policy/ -v
 
       - name: Conftest compliant plan
-        run: conftest test --policy policy/terraform.rego policy/testdata/compliant.plan.json
+        run: conftest test --policy policy/terraform.rego testdata/plans/compliant.plan.json
 
       - name: Conftest rejects noncompliant plan
         run: |
-          if conftest test --policy policy/terraform.rego policy/testdata/noncompliant.plan.json; then
+          if conftest test --policy policy/terraform.rego testdata/plans/noncompliant.plan.json; then
             echo "noncompliant plan was allowed"
             exit 1
           fi

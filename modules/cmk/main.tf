@@ -1,6 +1,11 @@
 data "aws_caller_identity" "current" {}
 
 data "aws_iam_policy_document" "this" {
+  # KMS key policies only accept Resource="*" and need an account-root admin statement.
+  #checkov:skip=CKV_AWS_109:Account root must administer the CMK so the key cannot be orphaned.
+  #checkov:skip=CKV_AWS_111:Account root must administer the CMK so the key cannot be orphaned.
+  #checkov:skip=CKV_AWS_356:KMS key policies require Resource "*".
+
   source_policy_documents = var.additional_policy_json == null ? [] : [var.additional_policy_json]
 
   statement {
